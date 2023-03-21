@@ -59,8 +59,6 @@ def create_topic():
 
 
 def create_producer():
-    bootstrap_servers   =   'localhost:9092'
-    kafka_topic         =   'world_clock_topic'
 
     producer = KafkaProducer(bootstrap_servers=bootstrap_servers)
 
@@ -77,6 +75,11 @@ def create_producer():
     'Malta': 'Europe/Malta'
     }
 
+    main_message_1 = f"Sending messages to '{kafka_topic}' topic ... " 
+    main_message_2 = f"  " 
+    producer.send(kafka_topic, main_message_1.encode('utf-8'))
+    producer.send(kafka_topic, main_message_2.encode('utf-8'))
+
     while True:
         for city, timezone in cities.items():
             now = datetime.now(pytz.timezone(timezone))
@@ -86,7 +89,7 @@ def create_producer():
             producer.send(kafka_topic, current_datetime_message.encode('utf-8'))
 
         line_break_message_1 = '---------------------'
-        line_break_message_2 = ''
+        line_break_message_2 = ' '
         line_break_message_3 = '---------------------'
         
         producer.send(kafka_topic, line_break_message_1.encode('utf-8'))
@@ -101,7 +104,10 @@ def create_producer():
 
 
 def create_consumer():
-    pass
+
+    consumer = KafkaConsumer(kafka_topic,bootstrap_servers)
+
+    return consumer
 
 
 
@@ -113,3 +119,4 @@ def create_world_clock_ui():
 
 if __name__ == '__main__':
     create_producer()
+    create_consumer()
