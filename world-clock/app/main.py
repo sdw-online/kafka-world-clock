@@ -56,22 +56,9 @@ def create_producer():
             
             # Structure the message for the producer to send to the Kafka topic  
             current_datetime_message = f" {city}: {current_time} {current_date}"
-            basic_line_break_message = ' '
 
             # Send the messages to the 'world_clock_topic' Kafka topic
             producer.send(kafka_topic, current_datetime_message.encode('utf-8'))
-            # producer.send(kafka_topic, basic_line_break_message.encode('utf-8'))
-
-
-        # Send line breaks to split the messages out in the results
-        line_break_message_1 = '---------------------'
-        line_break_message_2 = ' '
-        line_break_message_3 = '---------------------'
-        
-        # Send the line breaks to the results
-        # producer.send(kafka_topic, line_break_message_1.encode('utf-8'))
-        # producer.send(kafka_topic, line_break_message_2.encode('utf-8'))
-        # producer.send(kafka_topic, line_break_message_3.encode('utf-8'))
 
         # Refresh the streams every second
         time.sleep(1)
@@ -96,30 +83,29 @@ def create_world_clock_ui():
 
 
     # Create a frame for all the cities and timezones displayed
-    clock_frame = tk.Frame(window)
+    clock_frame = tk.Frame(window, width=800, height=500)
     clock_frame.pack(fill=tk.BOTH, expand=True)
 
+    blank_row_label_1 = tk.Label(clock_frame, text=None)
+    blank_row_label_1.grid(row=0, column=0)
+
+    blank_row_label_2 = tk.Label(clock_frame, text=None)
+    blank_row_label_2.grid(row=1, column=0)
 
     city_labels = {}
     time_labels = {}
 
     for row, city in enumerate(cities.keys()):
-        city_label = tk.Label(clock_frame, text=f'{city}:', font=("Helvetica", 16))
-        city_label.grid(row=row, column=0, sticky='w', padx=5, pady=5)
+        city_label = tk.Label(clock_frame, text=None, bg="lightblue", fg="white", font=("Courier", 20))
+        city_label.grid(row=row+2, column=0, padx=5, pady=5)
         city_labels[city] = city_label
         
         
-        timezone_label = tk.Label(clock_frame, text=None, font=('Helvetica', 16))
-        timezone_label.grid(row=row, column=1, sticky='e', padx=5, pady=5)
+        timezone_label = tk.Label(clock_frame, text=None, font=("Courier", 20))
+        timezone_label.grid(row=row+2, column=1, sticky='w', padx=5, pady=5)
         time_labels[city] = timezone_label
 
 
-        clock_frame.grid_columnconfigure(10, weight=0, uniform='col')
-        clock_frame.grid_columnconfigure(10, weight=1, uniform='col')
-
-    print(city_labels)
-    print('')
-    print(time_labels)
 
     # Set the UI as the consumer of the Kafka messages 
     consumer = create_consumer()
@@ -148,12 +134,8 @@ def create_world_clock_ui():
             date_str = ":".join(message_extracts[1:]).strip()
             date_str = date_str[9:].strip()
 
-            # print(message_extracts)
-            # print(time_str)
-            # print(date_str)
 
-
-            # Check if this is a new message for the city 
+            # Check if this is a new message for the city
             if city not in latest_messages or latest_messages[city] !=  message_value:
 
                 # Update the latest message for this city 
@@ -161,7 +143,9 @@ def create_world_clock_ui():
 
 
                 # Update the time displayed for each city
-                time_labels[city]['text'] = f" {time_str}    {date_str}"
+                time_labels[city]['text'] = f"{city}:                 {time_str}            {date_str}"
+
+                # print(time_labels[city]['text'])
 
 
 
