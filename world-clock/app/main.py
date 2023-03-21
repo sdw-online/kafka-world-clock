@@ -12,16 +12,16 @@ bootstrap_servers   =   'localhost:9092'
 kafka_topic         =   'world_clock_topic'
 
 cities = {
-    'New York': 'America/New_York',
-    'London': 'Europe/London',
-    'Paris': 'Europe/Paris',
-    'Tokyo': 'Asia/Tokyo',
-    'Sydney': 'Australia/Sydney',
-    'Lagos': 'Africa/Lagos',
-    'Lusaka': 'Africa/Lusaka',
-    'Shanghai': 'Asia/Shanghai',
-    'Madrid': 'Europe/Madrid',
-    'Malta': 'Europe/Malta'
+'New York': 'America/New_York',
+'London': 'Europe/London',
+'Paris': 'Europe/Paris',
+'Tokyo': 'Asia/Tokyo',
+'Sydney': 'Australia/Sydney',
+'Lagos': 'Africa/Lagos',
+'Lusaka': 'Africa/Lusaka',
+'Shanghai': 'Asia/Shanghai',
+'Madrid': 'Europe/Madrid',
+'Malta': 'Europe/Malta'
 }
 
 
@@ -101,20 +101,25 @@ def create_world_clock_ui():
 
 
     city_labels = {}
-    for row, city in enumerate(cities.keys()):
-        label = tk.Label(clock_frame, text="", font=("Helvetica", 16))
-        label.grid(row=row, column=0, sticky='w', padx=50, pady=5)
-        city_labels[city] = label
-
-    
     time_labels = {}
+
     for row, city in enumerate(cities.keys()):
-        label = tk.Label(clock_frame, text="", font=('Helvetica', 16))
-        label.grid(row=row, column=1, sticky='e', padx=10, pady=5)
-        time_labels[city] = label
+        city_label = tk.Label(clock_frame, text=f'{city}:', font=("Helvetica", 16))
+        city_label.grid(row=row, column=0, sticky='w', padx=5, pady=5)
+        city_labels[city] = city_label
+        
+        
+        timezone_label = tk.Label(clock_frame, text=None, font=('Helvetica', 16))
+        timezone_label.grid(row=row, column=1, sticky='e', padx=5, pady=5)
+        time_labels[city] = timezone_label
 
 
+        clock_frame.grid_columnconfigure(10, weight=0, uniform='col')
+        clock_frame.grid_columnconfigure(10, weight=1, uniform='col')
 
+    print(city_labels)
+    print('')
+    print(time_labels)
 
     # Set the UI as the consumer of the Kafka messages 
     consumer = create_consumer()
@@ -144,8 +149,8 @@ def create_world_clock_ui():
             date_str = date_str[9:].strip()
 
             # print(message_extracts)
-            print(time_str)
-            print(date_str)
+            # print(time_str)
+            # print(date_str)
 
 
             # Check if this is a new message for the city 
@@ -156,9 +161,9 @@ def create_world_clock_ui():
 
 
                 # Update the time displayed for each city
-                time_labels[city]['text'] = f"{city}:            {time_str}    {date_str}"
+                time_labels[city]['text'] = f" {time_str}    {date_str}"
 
-    
+
 
     # Display the messages in the Tkinter UI via threads
     consumer_thread = threading.Thread(target=get_messages)
