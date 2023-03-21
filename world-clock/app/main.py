@@ -57,7 +57,7 @@ def create_producer():
 
             # Send the messages to the 'world_clock_topic' Kafka topic
             producer.send(kafka_topic, current_datetime_message.encode('utf-8'))
-            producer.send(kafka_topic, basic_line_break_message.encode('utf-8'))
+            # producer.send(kafka_topic, basic_line_break_message.encode('utf-8'))
 
 
         # Send line breaks to split the messages out in the results
@@ -66,9 +66,9 @@ def create_producer():
         line_break_message_3 = '---------------------'
         
         # Send the line breaks to the results
-        producer.send(kafka_topic, line_break_message_1.encode('utf-8'))
-        producer.send(kafka_topic, line_break_message_2.encode('utf-8'))
-        producer.send(kafka_topic, line_break_message_3.encode('utf-8'))
+        # producer.send(kafka_topic, line_break_message_1.encode('utf-8'))
+        # producer.send(kafka_topic, line_break_message_2.encode('utf-8'))
+        # producer.send(kafka_topic, line_break_message_3.encode('utf-8'))
 
         # Refresh the streams every second
         time.sleep(1)
@@ -91,11 +91,29 @@ def create_world_clock_ui():
     # Create the Tkinter window
     window = tk.Tk()
     window.title("World Clock by SDW")
-    window.geometry("600x400")
+    window.geometry("800x500")
 
-    # Add the digital clock display 
-    clock_display = tk.Text(window)
-    clock_display.pack(fill=tk.BOTH, expand=True)
+
+    # Create a frame for all the cities and timezones displayed
+    clock_frame = tk.Frame(window)
+    clock_frame.pack(fill=tk.BOTH, expand=True)
+
+
+    city_labels = {}
+    for row, city in enumerate(cities.keys()):
+        label = tk.Label(clock_frame, text="", font=("Helvetica", 16))
+        label.grid(row=row, column=0, sticky='w', padx=50, pady=5)
+        city_labels[city] = label
+
+    
+    time_labels = {}
+    for row, city in enumerate(cities.keys()):
+        label = tk.Label(clock_frame, text="", font=('Helvetica', 16))
+        label.grid(row=row, column=1, sticky='e', padx=10, pady=5)
+        time_labels[city] = label
+
+
+
 
     # Set the UI as the consumer of the Kafka messages 
     consumer = create_consumer()
@@ -111,8 +129,11 @@ def create_world_clock_ui():
                 message_value = message.value.decode('utf-8')
 
 
-            # Extract the city from the consumed message 
-            city = message_value.split(':')[0].strip()
+            # Extract the city name and time from each consumed message
+            parts = message_value.split(':') 
+            city = parts[0].strip()
+            time_str = ":".join(parts[1:3]).strip()
+            date_str = parts[3].strip()
 
 
             # Check if this is a new message for the city 
@@ -121,12 +142,31 @@ def create_world_clock_ui():
                 # Update the latest message for this city 
                 latest_messages[city] = message_value
 
-                # Only include the latest messages for the city (clear old results)
-                clock_display.delete('1.0', tk.END) 
 
-                # Display the latest consumed messages (i.e. city and timezones)
-                for city_message in latest_messages.values():
-                    clock_display.insert(tk.END, city_message + "\n")
+
+
+                # Check if the dates are one day later than Europe/London timezone 
+
+                europe_london_timezone = pytz.timezone('Europe/London')
+                now = datetime.now(europe_london_timezone)
+                current_date = now.strftime('%Y-%m-%d')
+                # message_date = datetime.strptime(date_str, '%Y-%m-%d').date()
+                message_date = datetime.strptime(date_str, '%d %Y-%m-%d').date()
+
+                delta = message_date - datetime.strptime(current_date, '%Y-%m-%d').date()
+
+                if delta.days == 1:
+                    bg_colour = 'red'
+                elif delta.days == -1:
+                    bg_colour = 'orange'
+                else:
+                    bg_colour = 'white'
+
+
+
+                # Update the time displayed for each city
+                time_labels[city].configure(text=f"{city}:            {time_str}", bg=bg_colour)
+                time_labels[city]['text'] = f"{city}:            {time_str}"
 
     
 
@@ -145,4 +185,4 @@ if __name__ == '__main__':
     producer_thread = threading.Thread(target=create_producer)
     producer_thread.start()
 
-    create_world_clock_ui()
+create_world_clock_ui()
