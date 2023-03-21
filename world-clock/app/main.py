@@ -4,7 +4,7 @@ import tkinter as tk
 from kafka import KafkaProducer, KafkaConsumer
 import json
 import time
-
+import threading
 
 # Define the constants 
 
@@ -68,7 +68,7 @@ def create_producer():
 
 def create_consumer():
 
-    consumer = KafkaConsumer(kafka_topic,bootstrap_servers)
+    consumer = KafkaConsumer(kafka_topic,bootstrap_servers=bootstrap_servers)
 
     return consumer
 
@@ -78,13 +78,11 @@ def create_world_clock_ui():
 
     
     window = tk.Tk()
-    window.Title("World Clock by SDW")
+    window.title("World Clock by SDW")
     window.geometry("600x400")
 
     clock_display = tk.Text(window)
     clock_display.pack(fill=tk.BOTH, expand=True)
-
-
 
 
     consumer = create_consumer()
@@ -93,12 +91,14 @@ def create_world_clock_ui():
         """ Consume the messages from the Kafka topic and display them in the Tkinter UI """
 
 
-
         for message in consumer:
-            message_value = json.loads(message.value.decode('utf-8'))
+            try:
+                message_value = json.loads(message.value.decode('utf-8'))
+            except:
+                message_value = message.value.decode('utf-8')
             clock_display.insert(tk.END, message_value + "\n")
 
-    import threading
+
     consumer_thread = threading.Thread(target=get_messages)
     consumer_thread.start()
 
@@ -109,5 +109,6 @@ def create_world_clock_ui():
 
 
 if __name__ == '__main__':
-    create_producer()
+    producer_thread = threading.Thread(target=create_producer)
+    producer_thread.start()
     create_world_clock_ui()
