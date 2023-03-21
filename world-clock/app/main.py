@@ -49,7 +49,10 @@ def create_producer():
 
             # Parse the date and time to a cleaner format
             current_time = now.strftime('%H:%M:%S')
-            current_date = now.strftime('%Y-%m-%d')
+
+            # Display the date with the full weekday name, month name and year  
+            current_date = now.strftime('%A %d %B %Y')
+            # current_date = now.strftime('%Y-%m-%d')
             
             # Structure the message for the producer to send to the Kafka topic  
             current_datetime_message = f" {city}: {current_time} {current_date}"
@@ -78,9 +81,7 @@ def create_producer():
 
 def create_consumer():
     # Consume the latest messages from the Kafka topic
-
     consumer = KafkaConsumer(kafka_topic,bootstrap_servers=bootstrap_servers)
-    # consumer = KafkaConsumer(kafka_topic,bootstrap_servers=bootstrap_servers, auto_offset_reset='latest')
 
     return consumer
 
@@ -130,10 +131,21 @@ def create_world_clock_ui():
 
 
             # Extract the city name and time from each consumed message
-            parts = message_value.split(':') 
-            city = parts[0].strip()
-            time_str = ":".join(parts[1:3]).strip()
-            date_str = parts[3].strip()
+            message_extracts = message_value.split(':') 
+
+            city = message_extracts[0].strip()
+
+            # Extract time string 
+            time_str = ":".join(message_extracts[1:]).strip()
+            time_str = time_str[0:9]
+
+            # Extract date string
+            date_str = ":".join(message_extracts[1:]).strip()
+            date_str = date_str[9:].strip()
+
+            # print(message_extracts)
+            print(time_str)
+            print(date_str)
 
 
             # Check if this is a new message for the city 
@@ -143,30 +155,8 @@ def create_world_clock_ui():
                 latest_messages[city] = message_value
 
 
-
-
-                # Check if the dates are one day later than Europe/London timezone 
-
-                europe_london_timezone = pytz.timezone('Europe/London')
-                now = datetime.now(europe_london_timezone)
-                current_date = now.strftime('%Y-%m-%d')
-                # message_date = datetime.strptime(date_str, '%Y-%m-%d').date()
-                message_date = datetime.strptime(date_str, '%d %Y-%m-%d').date()
-
-                delta = message_date - datetime.strptime(current_date, '%Y-%m-%d').date()
-
-                if delta.days == 1:
-                    bg_colour = 'red'
-                elif delta.days == -1:
-                    bg_colour = 'orange'
-                else:
-                    bg_colour = 'white'
-
-
-
                 # Update the time displayed for each city
-                time_labels[city].configure(text=f"{city}:            {time_str}", bg=bg_colour)
-                time_labels[city]['text'] = f"{city}:            {time_str}"
+                time_labels[city]['text'] = f"{city}:            {time_str}    {date_str}"
 
     
 
