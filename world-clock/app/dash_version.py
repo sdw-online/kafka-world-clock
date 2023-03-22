@@ -1,151 +1,140 @@
-from datetime import datetime
-import pytz
-from kafka import KafkaProducer, KafkaConsumer
-import json
-import time
-import threading
+# Import necessary libraries
+from kafka import KafkaProducer
 import dash
-from dash.dependencies import Input, Output
-import plotly_express as px
-from dash import html 
-import dash_core_components as dcc
+from dash import html
+from dash import dcc
+from dash.dependencies import Output, Input
+from pytz import timezone
+from datetime import datetime
 
 
 
-# Define the constants 
+# Define a Kafka producer to send the data to the Kafka topic
+producer = KafkaProducer(bootstrap_servers=['localhost:9092'])
+
+
+
+# Define a function to get the current time for each city using the pytz and datetime libraries
+def get_current_time(city, _timezone):
+    now = datetime.now(timezone(_timezone))
+    date_str = now.strftime("%A, %d %B %Y")
+    # time_str = now.strftime("%I:%M:%S %p")
+    time_str = now.strftime("%H:%M:%S")
+    return f"{city}, {_timezone}, {time_str}, {date_str}"
+
+
+
+# Define a Dash app layout to display the clock
 app = dash.Dash(__name__)
-bootstrap_servers   =   'localhost:9092'
-kafka_topic         =   'world_clock_topic'
-
-cities = {
-'New York': 'America/New_York',
-'London': 'Europe/London',
-'Paris': 'Europe/Paris',
-'Tokyo': 'Asia/Tokyo',
-'Sydney': 'Australia/Sydney',
-'Lagos': 'Africa/Lagos',
-'Lusaka': 'Africa/Lusaka',
-'Shanghai': 'Asia/Shanghai',
-'Madrid': 'Europe/Madrid',
-'Malta': 'Europe/Malta'
-}
-
-
-
-
-
-def create_producer():
-    
-    # Create the Kafka producer
-    producer = KafkaProducer(bootstrap_servers=bootstrap_servers)
-
-    # Create the messages for the producer to send to the Kafka topic
-    main_message_1 = f"Sending messages to '{kafka_topic}' topic " 
-    main_message_2 = f"  " 
-
-    # Send the messages to the Kafka topic
-    producer.send(kafka_topic, main_message_1.encode('utf-8'))
-    producer.send(kafka_topic, main_message_2.encode('utf-8'))
-
-
-    # Use an infinite loop to stream the current date and time from different cities and timezones
-    while True:
-        for city, timezone in cities.items():
-
-            # Get the current date and time for the selected timezone
-            now = datetime.now(pytz.timezone(timezone))
-
-            # Parse the date and time to a cleaner format
-            current_time = now.strftime('%H:%M:%S')
-
-            # Display the date with the full weekday name, month name and year  
-            current_date = now.strftime('%A %d %B %Y')
-            # current_date = now.strftime('%Y-%m-%d')
-            
-            # Structure the message for the producer to send to the Kafka topic  
-            current_datetime_message = f" {city}: {current_time} {current_date}"
-
-            # Send the messages to the 'world_clock_topic' Kafka topic
-            producer.send(kafka_topic, current_datetime_message.encode('utf-8'))
-
-        # Refresh the streams every second
-        time.sleep(1)
-        
-
-
-
-def create_consumer():
-    # Consume the latest messages from the Kafka topic
-    consumer = KafkaConsumer(kafka_topic,bootstrap_servers=bootstrap_servers)
-
-    return consumer
-
-
-
-def get_messages():
-    consumer = create_consumer()
-
-    latest_messages = {}
-    for message in consumer:
-        try:
-            message_value = json.loads(message.value.decode('utf-8'))
-        except:
-            message_value = message.value.decode('utf-8')
-
-        # Extract the city name and time from each consumed message
-        message_extracts = message_value.split(':')
-        city = message_extracts[0].strip()
-
-        # Extract time string
-        time_str = ":".join(message_extracts[1:]).strip()
-        time_str = time_str[0:9]
-
-        # Extract date string
-        date_str = ":".join(message_extracts[1:]).strip()
-        date_str = date_str[9:].strip()
-
-        # Check if this is a new message for the city
-        if city not in latest_messages or latest_messages[city] != message_value:
-            # Update the latest message for this city
-            latest_messages[city] = f"{city}:                 {time_str}            {date_str}"
-
-    return latest_messages
-
-
-
 app.layout = html.Div([
-    html.H1('World Clock by SDW'),
-    html.Div(id='clock-frame', children=[
-        html.Div([
-            html.Div(city, className='city-label', style={'background-color': 'lightblue', 'color': 'white', 'font-family': 'Courier', 'font-size': '20px'}) for city in cities.keys()
-        ], className='left-column'),
-        html.Div([
-            html.Div(id=f"{city}-time", className='time-label', style={'font-family': 'Courier', 'color': 'black','font-size': '20px'}) for city in cities.keys()
-        ], className='right-column')
-    ]),
-    dcc.Interval(id='update-interval', interval=1000),
+    html.H1("World Clock"),
+    dcc.Interval(
+        id='interval-component',
+        interval=1000,
+        n_intervals=0
+    ),
+    html.Table([
+        html.Thead(html.Tr([
+            html.Th("City"),
+            html.Th("Time"),
+            html.Th("Date")
+        ])),
+        html.Tbody([
+            html.Tr([
+                html.Td("New York"),
+                html.Td(id="new-york-time"),
+                html.Td(id="new-york-date")
+            ]),
+            html.Tr([
+                html.Td("London"),
+                html.Td(id="london-time"),
+                html.Td(id="london-date")
+            ]),
+            html.Tr([
+                html.Td("Paris"),
+                html.Td(id="paris-time"),
+                html.Td(id="paris-date")
+            ]),
+            html.Tr([
+                html.Td("Tokyo"),
+                html.Td(id="tokyo-time"),
+                html.Td(id="tokyo-date")
+            ]),
+            html.Tr([
+                html.Td("Sydney"),
+                html.Td(id="sydney-time"),
+                html.Td(id="sydney-date")
+            ]),
+            html.Tr([
+                html.Td("Lagos"),
+                html.Td(id="lagos-time"),
+                html.Td(id="lagos-date")
+            ]),
+            html.Tr([
+                html.Td("Lusaka"),
+                html.Td(id="lusaka-time"),
+                html.Td(id="lusaka-date")
+            ]),
+            html.Tr([
+                html.Td("Shanghai"),
+                html.Td(id="shanghai-time"),
+                html.Td(id="shanghai-date")
+            ]),
+            html.Tr([
+                html.Td("Madrid"),
+                html.Td(id="madrid-time"),
+                html.Td(id="madrid-date")
+            ]),
+            html.Tr([
+                html.Td("Malta"),
+                html.Td(id="malta-time"),
+                html.Td(id="malta-date")
+            ]),
+        ])
+    ])
 ])
 
-
+# Define a callback function to update the clock every second
 @app.callback(
-    [Output(f"{city}-time", "children") for city in cities.keys()],
-    Input('update-interval', 'n_intervals')
+    [Output("new-york-time", "children"),   Output("new-york-date", "children"),
+     Output("london-time", "children"),     Output("london-date", "children"),
+     Output("paris-time", "children"),      Output("paris-date", "children"),
+     Output("tokyo-time", "children"),      Output("tokyo-date", "children"),
+     Output("sydney-time", "children"),     Output("sydney-date", "children"),
+     Output("lagos-time", "children"),      Output("lagos-date", "children"),
+     Output("lusaka-time", "children"),     Output("lusaka-date", "children"),
+     Output("shanghai-time", "children"),   Output("shanghai-date", "children"),
+     Output("madrid-time", "children"),     Output("madrid-date", "children"),
+     Output("malta-time", "children"),      Output("malta-date", "children")],
+    Input('interval-component', 'n_intervals')
 )
-def update_time():
-    latest_messages = get_messages()
-    return [latest_messages[city] for city in cities.keys()]
+def update_clock(n):
+    # Get the current time for each city
+    new_york_time = get_current_time("New York", "America/New_York")
+    london_time = get_current_time("London", "Europe/London")
+    paris_time = get_current_time("Paris", "Europe/Paris")
+    tokyo_time = get_current_time("Tokyo", "Asia/Tokyo")
+    sydney_time = get_current_time("Sydney", "Australia/Sydney")
+    lagos_time = get_current_time("Lagos", "Africa/Lagos")
+    lusaka_time = get_current_time("Lusaka", "Africa/Lusaka")
+    shanghai_time = get_current_time("Shanghai", "Asia/Shanghai")
+    madrid_time = get_current_time("Madrid", "Europe/Madrid")
+    malta_time = get_current_time("Malta", "Europe/Malta")
+
+    # Send the data to the Kafka topic
+    producer.send("world_clock", f"{new_york_time}\n{london_time}\n{paris_time}\n{tokyo_time}\n{sydney_time}\n{lagos_time}\n{lusaka_time}\n{shanghai_time}\n{madrid_time}\n{malta_time}".encode('utf-8'))
+
+    # Return the updated clock values to the app
+    return new_york_time.split(", ")[-1],   new_york_time.split(", ")[0], \
+           london_time.split(", ")[-1],     london_time.split(", ")[0], \
+           paris_time.split(", ")[-1],      paris_time.split(", ")[0], \
+           tokyo_time.split(", ")[-1],      tokyo_time.split(", ")[0], \
+           sydney_time.split(", ")[-1],     sydney_time.split(", ")[0], \
+           lagos_time.split(", ")[-1],      lagos_time.split(", ")[0], \
+           lusaka_time.split(", ")[-1],     lusaka_time.split(", ")[0], \
+           shanghai_time.split(", ")[-1],   shanghai_time.split(", ")[0], \
+           madrid_time.split(", ")[-1],     madrid_time.split(", ")[0], \
+           malta_time.split(", ")[-1],      malta_time.split(", ")[0]
 
 
-
-if __name__ == '__main__':
-
-    # Run the operations concurrently 
-    producer_thread = threading.Thread(target=create_producer)
-    producer_thread.start()
-
-    # Start the thread for the consumer 
-    consumer_thread = threading.Thread(target=update_time)
-    consumer_thread.start()
-
-    # Run the Dash app
-    app.run_server(debug=True)
+app.run_server(debug=True)
